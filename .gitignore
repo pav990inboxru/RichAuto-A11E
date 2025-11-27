@@ -5,33 +5,46 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Dependencies
-venv/
-.venv/
-.env
-.env.local
-*.env.*
-
 # Build artifacts
-*.zip
+build/
+dist/
+
+# PyInstaller
+*.spec
 
 # Logs
 *.log
 
-# Editors
+# Temporary files
+*.tmp
+*.swp
+
+# Environment files
+.env
+.env.local
+*.env.*
+
+# Editor/IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*.tmp
 
 # Coverage
 .coverage
 coverage/
 htmlcov/
 
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
+# MyPy
+.mypy_cache/
+
+# PyTest
+.pytest_cache/
+
+# OS
+.DS_Store
+Thumbs.db
 ```
+cnc_belt_generator_portable.zip
+
+cnc_belt_generator_portable_new.zip
