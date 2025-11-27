@@ -14,8 +14,7 @@ This application generates G-code for a belt cutting CNC machine (RichAuto-A11E 
 
 - **Step**: Y-axis increment between cuts (default: 40.0)
 - **Width**: X-axis cutting length (default: 200.0)
-- **Start Height**: Z-axis initial safe height (default: 4.0)
-- **Retract Height**: Z-axis retract height after cuts (default: 20.0)
+- **Start Height**: Z-axis safe height (default: 4.0)
 - **Cut Depth**: Z-axis cutting depth (default: 0.0)
 - **Plunge Feedrate**: Feedrate for Z-axis plunge (default: 3000)
 - **Cut Feedrate**: Feedrate for X-axis cutting (default: 300)
