@@ -44,8 +44,8 @@ class CNCCodeGenerator:
         # Генерация кода по шаблону
         y_pos = 0.0
         # Первый проход - начальная позиция
-        code_lines.append(f"G00X0.000Y{y_pos:.0f}Z{raise_z:.3f}")
-        code_lines.append(f"Z{raise_z:.3f}")  # Дублируем Z как в шаблоне
+        code_lines.append(f"G00X0.000Y{y_pos:.0f}Z0.000")
+        code_lines.append(f"Z0.000")  # Устанавливаем Z в 0 перед резом
         code_lines.append(f"G01Z{cut_depth_z:.3f}")
         code_lines.append(f"X{width_x:.3f}F{feed_rate:.0f}")
         code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (без зависимости от raise_z)
@@ -58,7 +58,7 @@ class CNCCodeGenerator:
             # Перемещение к следующей Y позиции
             code_lines.append(f"X0.000Y{y_pos:.0f}")
             # Опускаемся до уровня реза
-            code_lines.append(f"Z{raise_z:.3f}")  # Дублируем высоту подъёма (как в шаблоне)
+            code_lines.append(f"Z0.000")  # Устанавливаем Z в 0 перед резом
             code_lines.append(f"G01Z{cut_depth_z:.3f}")
             # Режем по оси X
             code_lines.append(f"X{width_x:.3f}F{feed_rate:.0f}")
@@ -75,17 +75,18 @@ class CNCCodeGenerator:
         params = {}
         
         try:
-            # Извлечение высоты подъёма (Z после G00 или отдельно стоящее Z)
-            # Сначала ищем Z после G00
-            raise_matches = re.findall(r'G00[^\n]*Z([0-9.]+)', code)
-            if raise_matches:
-                # Берём первое значение подъёма как высоту (это начальная высота)
-                params['raise_z'] = float(raise_matches[0])
+            # Извлечение высоты подъёма после резки (Z после G00 в строках подъёма)
+            # В новой логике это фиксированное значение 20.000 мм
+            # Ищем G00Z20.000 или подобные команды подъёма после резки
+            raise_after_cut_matches = re.findall(r'G00Z([0-9.]+)', code)
+            if raise_after_cut_matches:
+                # Берём первое найденное значение подъёма после резки
+                # В нормальной ситуации это должно быть 20.000
+                params['raise_z'] = float(raise_after_cut_matches[0])
             else:
-                # Если нет G00Z, ищем просто Z после G00 в начальной позиции
-                initial_z_match = re.search(r'G00X[0-9.]+Y[0-9.]+Z([0-9.]+)', code)
-                if initial_z_match:
-                    params['raise_z'] = float(initial_z_match.group(1))
+                # Если не найдено, используем значение по умолчанию
+                params['raise_z'] = 4.000
+
             
             # Извлечение глубины реза (Z после G01)
             depth_matches = re.findall(r'G01[^\n]*Z([0-9.]+)', code)
