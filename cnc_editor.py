@@ -298,11 +298,11 @@ class CNCCodeEditor:
             
             y_pos = 0.0
             # Первый проход - начальная позиция
-            code_lines.append(f"G00X0.000Y{y_pos:.0f}Z{raise_z:.3f}")
-            code_lines.append(f"Z{raise_z:.3f}")  # Дублируем Z как в шаблоне
+            code_lines.append(f"G00X0.000Y{y_pos:.0f}Z0.000")  # Фиксированное значение Z0.000
+            code_lines.append(f"Z0.000")  # Дублируем Z как в шаблоне - всегда 0.000
             code_lines.append(f"G01Z{cut_depth_z:.3f}")
             code_lines.append(f"X{width_x:.3f}F{feed_rate:.0f}")
-            code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (без зависимости от raise_z)
+            code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (фиксированное значение)
             
             y_pos += step_y
             line_num = 1
@@ -314,13 +314,13 @@ class CNCCodeEditor:
             while y_pos <= 3200 and line_num < max_lines:  # Ограничение по Y
                 # Перемещение к следующей Y позиции
                 code_lines.append(f"X0.000Y{y_pos:.0f}")
-                # Опускаемся до уровня реза
-                code_lines.append(f"Z{raise_z:.3f}")  # Дублируем высоту подъёма (как в шаблоне)
+                # Устанавливаем Z=0.000 перед резом
+                code_lines.append(f"Z0.000")  # Фиксированное значение Z0.000 перед каждым резом
                 code_lines.append(f"G01Z{cut_depth_z:.3f}")
                 # Режем по оси X
                 code_lines.append(f"X{width_x:.3f}F{feed_rate:.0f}")
                 # Поднимаемся вверх
-                code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (без зависимости от raise_z)
+                code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (фиксированное значение)
                 
                 y_pos += step_y
                 line_num += 1
