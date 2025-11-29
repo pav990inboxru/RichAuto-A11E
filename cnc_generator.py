@@ -41,20 +41,32 @@ class CNCCodeGenerator:
         # Ограничиваем количество строк для предотвращения бесконечного цикла
         max_lines = 1000
         
+        # Генерация кода по шаблону
+        y_pos = 0.0
+        # Первый проход - начальная позиция
+        code_lines.append(f"G00X0.000Y{y_pos:.0f}Z{raise_z:.3f}")
+        code_lines.append(f"Z{raise_z:.3f}")  # Дублируем Z как в шаблоне
+        code_lines.append(f"G01Z{cut_depth_z:.3f}")
+        code_lines.append(f"X{width_x:.3f}F{feed_rate:.0f}")
+        code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (без зависимости от raise_z)
+        
+        y_pos += step_y
+        line_num = 1
+        
+        # Последующие проходы
         while y_pos <= 3200 and line_num < max_lines:  # Ограничение по Y
-            # Подъём на высоту
-            code_lines.append(f"G00X0.000Y{y_pos:.0f}Z{raise_z:.3f}")
-            # Рез
+            # Перемещение к следующей Y позиции
+            code_lines.append(f"X0.000Y{y_pos:.0f}")
+            # Опускаемся до уровня реза
+            code_lines.append(f"Z{raise_z:.3f}")  # Дублируем высоту подъёма (как в шаблоне)
             code_lines.append(f"G01Z{cut_depth_z:.3f}")
+            # Режем по оси X
             code_lines.append(f"X{width_x:.3f}F{feed_rate:.0f}")
-            # Подъём для перемещения
-            code_lines.append(f"G00Z{raise_z:.3f}")
+            # Поднимаемся вверх
+            code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (без зависимости от raise_z)
             
             y_pos += step_y
             line_num += 1
-        
-        # Финальная позиция
-        code_lines.append(f"G00X0.000Y{y_pos:.0f}")
         
         return '\n'.join(code_lines)
     
@@ -63,11 +75,17 @@ class CNCCodeGenerator:
         params = {}
         
         try:
-            # Извлечение высоты подъёма (Z после G00)
+            # Извлечение высоты подъёма (Z после G00 или отдельно стоящее Z)
+            # Сначала ищем Z после G00
             raise_matches = re.findall(r'G00[^\n]*Z([0-9.]+)', code)
             if raise_matches:
-                # Берём последнее значение подъёма как высоту
-                params['raise_z'] = float(raise_matches[-1])
+                # Берём первое значение подъёма как высоту (это начальная высота)
+                params['raise_z'] = float(raise_matches[0])
+            else:
+                # Если нет G00Z, ищем просто Z после G00 в начальной позиции
+                initial_z_match = re.search(r'G00X[0-9.]+Y[0-9.]+Z([0-9.]+)', code)
+                if initial_z_match:
+                    params['raise_z'] = float(initial_z_match.group(1))
             
             # Извлечение глубины реза (Z после G01)
             depth_matches = re.findall(r'G01[^\n]*Z([0-9.]+)', code)
@@ -80,22 +98,29 @@ class CNCCodeGenerator:
                 params['feed_rate'] = float(feed_matches[0])
             
             # Извлечение ширины (X в строках с движением)
-            x_values = re.findall(r'X([0-9.]+)', code)
+            x_values = re.findall(r'X([0-9.]+(?:\.[0-9]+)?)F?', code)
             if x_values:
                 # Берём максимальное значение как ширину
                 max_x = max(float(x) for x in x_values)
                 params['width_x'] = max_x
             
             # Извлечение шага (Y в строках с движением)
-            y_values = re.findall(r'Y([0-9.]+)', code)
+            y_values = re.findall(r'Y([0-9.]+(?:\.[0-9]+)?)', code)
             if len(y_values) > 1:
                 # Вычисляем средний шаг между значениями Y
                 y_nums = [float(y) for y in y_values]
                 y_nums.sort()
-                steps = [y_nums[i+1] - y_nums[i] for i in range(len(y_nums)-1)]
-                if steps:
-                    avg_step = sum(steps) / len(steps)
-                    params['step_y'] = avg_step
+                # Убираем дубликаты
+                y_nums = list(set(y_nums))
+                y_nums.sort()
+                if len(y_nums) > 1:
+                    steps = [y_nums[i+1] - y_nums[i] for i in range(len(y_nums)-1) if y_nums[i+1] != y_nums[i]]
+                    if steps:
+                        # Берём модальное значение или среднее
+                        from collections import Counter
+                        step_counts = Counter(steps)
+                        # Находим наиболее часто встречающийся шаг
+                        params['step_y'] = step_counts.most_common(1)[0][0]
         
         except Exception as e:
             print(f"Ошибка при извлечении параметров: {e}")
