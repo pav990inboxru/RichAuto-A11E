@@ -25,7 +25,7 @@ class CNCCodeEditor:
         # Переменные для параметров
         self.step_y = tk.StringVar(value="40")
         self.width_x = tk.StringVar(value="200")
-        self.raise_z = tk.StringVar(value="4.000")
+        self.raise_z = tk.StringVar(value="20.000")
         self.cut_depth_z = tk.StringVar(value="0.000")
         self.feed_rate = tk.StringVar(value="300")
         
@@ -234,12 +234,12 @@ class CNCCodeEditor:
     def extract_parameters_from_code(self, code: str):
         """Извлечение параметров из кода"""
         try:
-            # Извлечение высоты подъёма (Z после G00 или отдельно стоящее Z)
-            # Сначала ищем Z после G00
-            raise_match = re.search(r'G00[^\n]*Z([0-9.]+)', code)
-            if raise_match:
-                # Берём первое значение подъёма как высоту (это начальная высота)
-                self.raise_z.set(raise_match.group(1))
+            # Извлечение высоты подъёма (Z после G00, которая указывает высоту подъема после реза)
+            # Ищем последнюю G00Z команду (обычно это команда подъема после реза)
+            raise_matches = re.findall(r'G00[^\n]*Z([0-9.]+)', code)
+            if raise_matches:
+                # Берём последнее значение подъёма (это высота подъема после реза)
+                self.raise_z.set(raise_matches[-1])
             else:
                 # Если нет G00Z, ищем просто Z после G00 в начальной позиции
                 initial_z_match = re.search(r'G00X[0-9.]+Y[0-9.]+Z([0-9.]+)', code)
@@ -302,7 +302,7 @@ class CNCCodeEditor:
             code_lines.append(f"Z0.000")  # Дублируем Z как в шаблоне - всегда 0.000
             code_lines.append(f"G01Z{cut_depth_z:.3f}")
             code_lines.append(f"X{width_x:.3f}F{feed_rate:.0f}")
-            code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (фиксированное значение)
+            code_lines.append(f"G00Z{raise_z:.3f}")  # Подъём на заданную высоту из параметра
             
             y_pos += step_y
             line_num = 1
@@ -320,7 +320,7 @@ class CNCCodeEditor:
                 # Режем по оси X
                 code_lines.append(f"X{width_x:.3f}F{feed_rate:.0f}")
                 # Поднимаемся вверх
-                code_lines.append(f"G00Z20.000")  # Подъём на 20.000 как в шаблоне (фиксированное значение)
+                code_lines.append(f"G00Z{raise_z:.3f}")  # Подъём на заданную высоту из параметра
                 
                 y_pos += step_y
                 line_num += 1
